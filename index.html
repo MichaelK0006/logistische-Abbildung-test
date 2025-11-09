@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Logistische Iteration verstehen</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; background: #f9f9f9; }
+    canvas { max-width: 600px; margin-top: 2rem; }
+  </style>
+</head>
+<body>
+  <h1>Logistische Gleichung interaktiv</h1>
+  <label>Wachstumsrate r: <input id="r" type="number" value="3.5" step="0.01"></label><br>
+  <label>Anfangswert x₀: <input id="x0" type="number" value="0.5" step="0.01"></label><br>
+  <label>Iterationen: <input id="n" type="number" value="50"></label><br>
+  <button onclick="simulate()">Iterieren</button>
+
+  <canvas id="chart"></canvas>
+
+  <script>
+    let chart;
+    function logistic(x, r) {
+      return r * x * (1 - x);
+    }
+
+    function simulate() {
+      const r = parseFloat(document.getElementById('r').value);
+      let x = parseFloat(document.getElementById('x0').value);
+      const n = parseInt(document.getElementById('n').value);
+      const xs = [x];
+      const its = [0];
+
+      for (let i = 1; i <= n; i++) {
+        x = logistic(x, r);
+        xs.push(x);
+        its.push(i);
+      }
+
+      if (chart) chart.destroy();
+      chart = new Chart(document.getElementById('chart'), {
+        type: 'line',
+        data: {
+          labels: its,
+          datasets: [{
+            label: 'xₙ',
+            data: xs,
+            borderWidth: 2,
+            fill: false,
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: { min: 0, max: 1 }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
