@@ -1,62 +1,211 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <title>Logistische Iteration verstehen</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Logistische Abbildung – Interaktiv + Bifurkationsdiagramm</title>
+  <!-- Plotly laden -->
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
-    body { font-family: sans-serif; margin: 2rem; background: #f9f9f9; }
-    canvas { max-width: 600px; margin-top: 2rem; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      background: #f8f9fa;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 14px;
+    }
+    input[type="number"] {
+      width: 100px;
+      padding: 5px;
+      margin-top: 4px;
+    }
+    button {
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .checkboxes {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .plots {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 30px;
+    }
+    #plot, #bifurcation {
+      width: 500px;
+      height: 400px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
   </style>
 </head>
 <body>
-  <h1>Logistische Gleichung interaktiv</h1>
-  <label>Wachstumsrate r: <input id="r" type="number" value="3.5" step="0.01"></label><br>
-  <label>Anfangswert x₀: <input id="x0" type="number" value="0.5" step="0.01"></label><br>
-  <label>Iterationen: <input id="n" type="number" value="50"></label><br>
-  <button onclick="simulate()">Iterieren</button>
+  <h1>Logistische Abbildung – Interaktiv</h1>
+  
+  <div class="controls">
+    <label>
+      Wachstumsrate (r)
+      <input type="number" id="r" step="0.1" value="3.9">
+    </label>
+    <label>
+      Startwert (x₀)
+      <input type="number" id="x0" step="0.01" value="0.5">
+    </label>
+    <label>
+      Iterationen (n)
+      <input type="number" id="iterations" step="1" value="100">
+    </label>
+    <button id="update">Aktualisieren</button>
+  </div>
 
-  <canvas id="chart"></canvas>
+  <div class="checkboxes">
+    <label><input type="checkbox" id="showLine" checked> Linie anzeigen</label>
+    <label><input type="checkbox" id="showMarker" checked> Marker anzeigen</label>
+  </div>
+
+  <div class="plots">
+    <div id="plot"></div>
+    <div id="bifurcation"></div>
+  </div>
 
   <script>
-    let chart;
-    function logistic(x, r) {
-      return r * x * (1 - x);
+    // Logistische Abbildung berechnen
+    function logisticMap(r, x0, n) {
+      n = Math.floor(n);
+      const results = [x0];
+      let x = x0;
+      for (let i = 1; i < n; i++) {
+        x = r * x * (1 - x);
+        results.push(x);
+      }
+      return results;
     }
 
-    function simulate() {
-      const r = parseFloat(document.getElementById('r').value);
-      let x = parseFloat(document.getElementById('x0').value);
-      const n = parseInt(document.getElementById('n').value);
-      const xs = [x];
-      const its = [0];
+    // Plot der Iteration
+    function drawPlot() {
+      const r = parseFloat(document.getElementById("r").value);
+      const x0 = parseFloat(document.getElementById("x0").value);
+      const iterations = parseInt(document.getElementById("iterations").value);
 
-      for (let i = 1; i <= n; i++) {
-        x = logistic(x, r);
-        xs.push(x);
-        its.push(i);
+      if (isNaN(r) || isNaN(x0) || isNaN(iterations)) {
+        alert("Bitte nur Zahlen eingeben!");
+        return;
       }
 
-      if (chart) chart.destroy();
-      chart = new Chart(document.getElementById('chart'), {
-        type: 'line',
-        data: {
-          labels: its,
-          datasets: [{
-            label: 'xₙ',
-            data: xs,
-            borderWidth: 2,
-            fill: false,
-          }]
-        },
-        options: {
-          responsive: true,
-          scales: {
-            y: { min: 0, max: 1 }
+      const data = logisticMap(r, x0, iterations);
+      const xValues = Array.from({ length: iterations }, (_, i) => i);
+
+      const showLine = document.getElementById("showLine").checked;
+      const showMarker = document.getElementById("showMarker").checked;
+
+      const mode = (showLine && showMarker)
+        ? "lines+markers"
+        : (showLine ? "lines" : (showMarker ? "markers" : "lines"));
+
+      const trace = {
+        x: xValues,
+        y: data,
+        mode: mode,
+        type: "scatter",
+        marker: { size: 6, color: "#007bff" },
+        line: { width: 2, color: "#007bff" },
+        name: "x"
+      };
+
+      const layout = {
+        title: `Logistische Abbildung mit r = ${r}`,
+        xaxis: { title: "Iteration" },
+        yaxis: { title: "x", range: [0, 1] },
+        margin: { t: 50, l: 50, r: 20, b: 50 }
+      };
+
+      Plotly.newPlot("plot", [trace], layout, { responsive: true });
+    }
+
+    // Bifurkationsdiagramm berechnen
+    function drawBifurcation() {
+      const rMin = 2.5;
+      const rMax = 4.0;
+      const rSteps = 500;
+      const iterations = 1000;
+      const last = 100; // nur die letzten Werte plotten (stabile Phase)
+
+      const rValues = [];
+      const xValues = [];
+
+      for (let i = 0; i < rSteps; i++) {
+        const r = rMin + (i / rSteps) * (rMax - rMin);
+        let x = 0.5;
+        for (let j = 0; j < iterations; j++) {
+          x = r * x * (1 - x);
+          if (j >= iterations - last) {
+            rValues.push(r);
+            xValues.push(x);
           }
         }
-      });
+      }
+
+      const trace = {
+        x: rValues,
+        y: xValues,
+        mode: "markers",
+        type: "scattergl",
+        marker: { color: "rgba(0, 0, 0, 0.5)", size: 1 },
+        name: "Bifurkation"
+      };
+
+      const layout = {
+        title: "Bifurkationsdiagramm der logistischen Abbildung",
+        xaxis: { title: "r", range: [rMin, rMax] },
+        yaxis: { title: "x", range: [0, 1] },
+        margin: { t: 50, l: 50, r: 20, b: 50 }
+      };
+
+      Plotly.newPlot("bifurcation", [trace], layout, { responsive: true });
     }
+
+    // Event-Listener
+    document.getElementById("update").addEventListener("click", () => {
+      drawPlot();
+    });
+    document.getElementById("r").addEventListener("keyup", (e) => { if (e.key === "Enter") drawPlot(); });
+    document.getElementById("x0").addEventListener("keyup", (e) => { if (e.key === "Enter") drawPlot(); });
+    document.getElementById("iterations").addEventListener("keyup", (e) => { if (e.key === "Enter") drawPlot(); });
+    document.getElementById("showLine").addEventListener("change", drawPlot);
+    document.getElementById("showMarker").addEventListener("change", drawPlot);
+
+    // Initial-Render
+    drawPlot();
+    drawBifurcation();
   </script>
 </body>
 </html>
